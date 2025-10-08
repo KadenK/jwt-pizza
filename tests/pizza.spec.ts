@@ -5,6 +5,26 @@ const authTokenDiner =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MiwibmFtZSI6InBpenphIGRpbmVyIiwiZW1haWwiOiJkQGp3dC5jb20iLCJyb2xlcyI6W3sicm9sZSI6ImRpbmVyIn1dLCJpYXQiOjE3NTk4OTUwOTF9._JFyGDmi7UZsPu_jHUW2w4L5rgItJ115IknY6AcSUCk ";
 const bearerTokenDiner = "Bearer " + authTokenDiner;
 
+const authTokenFranchisee =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MywibmFtZSI6InBpenphIGZyYW5jaGlzZWUiLCJlbWFpbCI6ImZAand0LmNvbSIsInJvbGVzIjpbeyJyb2xlIjoiZGluZXIifSx7Im9iamVjdElkIjoxLCJyb2xlIjoiZnJhbmNoaXNlZSJ9LHsib2JqZWN0SWQiOjIsInJvbGUiOiJmcmFuY2hpc2VlIn1dLCJpYXQiOjE3NTk4OTU1NjJ9.nH2VRqAD8yfPbVL7YWkam2kI3dh9dNwYPslH2zEqVW0";
+const bearerTokenFranchisee = "Bearer " + authTokenFranchisee;
+
+const authTokenAdmin =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwibmFtZSI6IuW4uOeUqOWQjeWtlyIsImVtYWlsIjoiYUBqd3QuY29tIiwicm9sZXMiOlt7InJvbGUiOiJhZG1pbiJ9XSwiaWF0IjoxNzU5ODk1ODg4fQ.Z8UwklGgXoiSaOUYLm4KFI53xUFHBPj5Nyttqykdtvk";
+const bearerTokenAdmin = "Bearer " + authTokenAdmin;
+
+test.beforeEach(async ({ page }) => {
+  await page.route("**/version.json", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        version: "20000101.000000",
+      }),
+    });
+  });
+});
+
 test("home page", async ({ page }) => {
   await page.goto("/");
 
@@ -320,4 +340,257 @@ test.describe.serial("diner user tests", () => {
       "Here is your JWT Pizza!"
     );
   });
+});
+
+test("purchase without login", async ({ page }) => {
+  await page.goto("/ ");
+  await mockMenu(page);
+  await page.getByRole("button", { name: "Order now" }).click();
+  await page.getByRole("link", { name: "Image Description Veggie A" }).click();
+  await page.getByRole("link", { name: "Image Description Pepperoni" }).click();
+  await page.getByRole("combobox").selectOption("1");
+  await page.getByRole("button", { name: "Checkout" }).click();
+  await expect(page.getByRole("heading")).toContainText("Welcome back");
+  await expect(page.locator("form")).toContainText("Login");
+});
+
+test("about page should show", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("link", { name: "About" }).click();
+  await expect(page.getByRole("list")).toContainText("homeabout");
+});
+
+test("history page should show", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("link", { name: "History" }).click();
+  await expect(page.getByRole("list")).toContainText("homehistory");
+  await expect(page.getByRole("heading")).toContainText("Mama Rucci, my my");
+});
+
+test("franchise dashboard shows not logged in", async ({ page }) => {
+  await page.goto("/");
+  await page
+    .getByLabel("Global")
+    .getByRole("link", { name: "Franchise" })
+    .click();
+  await expect(page.getByRole("list")).toContainText("homefranchise-dashboard");
+  await expect(page.getByRole("alert")).toContainText(
+    "If you are already a franchisee, pleaseloginusing your franchise account"
+  );
+});
+
+async function signInFranchisee(page: Page) {
+  await page.route("**/api/auth", async (route, request) => {
+    if (
+      request.method() === "PUT" &&
+      (await request.postDataJSON()).email === "f@jwt.com" &&
+      (await request.postDataJSON()).password === "franchisee"
+    ) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          user: {
+            id: 3,
+            name: "pizza franchisee",
+            email: "f@jwt.com",
+            roles: [
+              {
+                role: "diner",
+              },
+              {
+                objectId: 1,
+                role: "franchisee",
+              },
+              {
+                objectId: 2,
+                role: "franchisee",
+              },
+            ],
+          },
+          token: authTokenFranchisee,
+        }),
+      });
+    } else {
+      await route.continue();
+    }
+  });
+  await page.getByRole("link", { name: "Login", exact: true }).click();
+  await page.getByRole("textbox", { name: "Email address" }).click();
+  await page.getByRole("textbox", { name: "Email address" }).fill("f@jwt.com");
+  await page.getByRole("textbox", { name: "Password" }).click();
+  await page.getByRole("textbox", { name: "Password" }).fill("franchisee");
+  await page.getByRole("button", { name: "Login" }).click();
+  await expect(page.locator("#navbar-dark")).toContainText("Logout");
+  await expect(page.getByLabel("Global")).toContainText("pf");
+}
+
+test("sign in as franchisee", async ({ page }) => {
+  await page.goto("/");
+  await signInFranchisee(page);
+});
+
+test("create and delete store", async ({ page }) => {
+  await page.goto("/");
+  await signInFranchisee(page);
+
+  let callCount = 0;
+  await page.route("**/api/franchise/3", async (route, request) => {
+    if (
+      request.method() === "GET" &&
+      request.headers()["authorization"] === bearerTokenFranchisee
+    ) {
+      callCount++;
+      const responseData =
+        callCount === 1
+          ? [
+              {
+                id: 1,
+                name: "pizzaPocket",
+                admins: [
+                  {
+                    id: 3,
+                    name: "pizza franchisee",
+                    email: "f@jwt.com",
+                  },
+                ],
+                stores: [
+                  {
+                    id: 1,
+                    name: "SLC",
+                    totalRevenue: 0.2684,
+                  },
+                ],
+              },
+              {
+                id: 2,
+                name: "testing",
+                admins: [
+                  {
+                    id: 3,
+                    name: "pizza franchisee",
+                    email: "f@jwt.com",
+                  },
+                ],
+                stores: [],
+              },
+            ]
+          : [
+              {
+                id: 1,
+                name: "pizzaPocket",
+                admins: [
+                  {
+                    id: 3,
+                    name: "pizza franchisee",
+                    email: "f@jwt.com",
+                  },
+                ],
+                stores: [
+                  {
+                    id: 1,
+                    name: "SLC",
+                    totalRevenue: 0.2684,
+                  },
+                  {
+                    id: 17,
+                    name: "testing",
+                    totalRevenue: 0,
+                  },
+                ],
+              },
+              {
+                id: 2,
+                name: "testing",
+                admins: [
+                  {
+                    id: 3,
+                    name: "pizza franchisee",
+                    email: "f@jwt.com",
+                  },
+                ],
+                stores: [],
+              },
+            ];
+
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(responseData),
+      });
+    } else {
+      await route.continue();
+    }
+  });
+
+  await page.route("**/api/franchise/1/store", async (route, request) => {
+    if (
+      request.method() === "POST" &&
+      request.headers()["authorization"] === bearerTokenFranchisee
+    ) {
+      const postData = await request.postDataJSON();
+      if (postData && postData.name === "testing") {
+        await route.fulfill({
+          status: 201,
+          contentType: "application/json",
+          body: JSON.stringify({
+            id: 17,
+            franchiseId: 1,
+            name: "testing",
+          }),
+        });
+        return;
+      }
+    }
+    await route.continue();
+  });
+
+  await page.route("**/api/franchise/1/store/17", async (route, request) => {
+    if (
+      request.method() === "DELETE" &&
+      request.headers()["authorization"] === bearerTokenFranchisee
+    ) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: "",
+      });
+    } else {
+      await route.continue();
+    }
+  });
+
+  await page.route("**/api/franchise/1/store/17", async (route, request) => {
+    if (
+      request.method() === "DELETE" &&
+      request.headers()["authorization"] === bearerTokenFranchisee
+    ) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ message: "Store deleted" }),
+      });
+    } else {
+      await route.continue();
+    }
+  });
+
+  await page
+    .getByLabel("Global")
+    .getByRole("link", { name: "Franchise" })
+    .click();
+  await expect(page.getByRole("list")).toContainText("homefranchise-dashboard");
+  // Be more specific - look for heading containing "pizzaPocket"
+  await expect(
+    page.getByRole("heading", { name: /pizzaPocket/i })
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Create store" }).click();
+  await page.getByRole("textbox", { name: "store name" }).click();
+  await page.getByRole("textbox", { name: "store name" }).fill("testing");
+  await page.getByRole("button", { name: "Create" }).click();
+  await page
+    .getByRole("row", { name: "testing 0 ₿ Close" })
+    .getByRole("button")
+    .click();
+  await page.getByRole("button", { name: "Close" }).click();
 });

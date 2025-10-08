@@ -69,31 +69,23 @@ test("register a user", async ({ page }) => {
 
 async function signInDiner(page: Page) {
   await page.route("**/api/auth", async (route, request) => {
-    if (
-      request.method() === "PUT" &&
-      (await request.postDataJSON()).email === "d@jwt.com" &&
-      (await request.postDataJSON()).password === "diner"
-    ) {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          user: {
-            id: 2,
-            name: "pizza diner",
-            email: "d@jwt.com",
-            roles: [
-              {
-                role: "diner",
-              },
-            ],
-          },
-          token: authTokenDiner,
-        }),
-      });
-    } else {
-      await route.continue();
-    }
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        user: {
+          id: 2,
+          name: "pizza diner",
+          email: "d@jwt.com",
+          roles: [
+            {
+              role: "diner",
+            },
+          ],
+        },
+        token: authTokenDiner,
+      }),
+    });
   });
   await page.getByRole("link", { name: "Login" }).click();
   await page.getByRole("textbox", { name: "Email address" }).fill("d@jwt.com");
@@ -106,85 +98,74 @@ async function signInDiner(page: Page) {
 
 async function mockMenu(page: Page) {
   await page.route("**/api/order/menu", async (route, request) => {
-    if (
-      request.method() === "GET" &&
-      request.headers()["authorization"] === "Bearer mocked-jwt-token-diner"
-    ) {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify([
-          {
-            id: 1,
-            title: "Veggie",
-            image: "pizza1.png",
-            price: 0.0038,
-            description: "A garden of delight",
-          },
-          {
-            id: 2,
-            title: "Pepperoni",
-            image: "pizza2.png",
-            price: 0.0042,
-            description: "Spicy treat",
-          },
-          {
-            id: 3,
-            title: "Margarita",
-            image: "pizza3.png",
-            price: 0.0042,
-            description: "Essential classic",
-          },
-          {
-            id: 4,
-            title: "Crusty",
-            image: "pizza4.png",
-            price: 0.0028,
-            description: "A dry mouthed favorite",
-          },
-          {
-            id: 5,
-            title: "Charred Leopard",
-            image: "pizza5.png",
-            price: 0.0099,
-            description: "For those with a darker side",
-          },
-        ]),
-      });
-    } else {
-      await route.continue();
-    }
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([
+        {
+          id: 1,
+          title: "Veggie",
+          image: "pizza1.png",
+          price: 0.0038,
+          description: "A garden of delight",
+        },
+        {
+          id: 2,
+          title: "Pepperoni",
+          image: "pizza2.png",
+          price: 0.0042,
+          description: "Spicy treat",
+        },
+        {
+          id: 3,
+          title: "Margarita",
+          image: "pizza3.png",
+          price: 0.0042,
+          description: "Essential classic",
+        },
+        {
+          id: 4,
+          title: "Crusty",
+          image: "pizza4.png",
+          price: 0.0028,
+          description: "A dry mouthed favorite",
+        },
+        {
+          id: 5,
+          title: "Charred Leopard",
+          image: "pizza5.png",
+          price: 0.0099,
+          description: "For those with a darker side",
+        },
+      ]),
+    });
   });
 
   await page.route("**/api/franchise*", async (route, request) => {
-    if (request.method() === "GET") {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          franchises: [
-            {
-              id: "1",
-              name: "pizzaPocket",
-              stores: [
-                {
-                  id: "1",
-                  name: "SLC",
-                },
-              ],
-            },
-            {
-              id: "2",
-              name: "testing",
-              stores: [],
-            },
-          ],
-          more: false,
-        }),
-      });
-    } else {
-      await route.continue();
-    }
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        franchises: [
+          {
+            id: "1",
+            name: "pizzaPocket",
+            stores: [
+              {
+                id: "1",
+                name: "SLC",
+              },
+            ],
+          },
+          {
+            id: "2",
+            name: "testing",
+            stores: [],
+          },
+        ],
+        more: false,
+      }),
+    });
   });
 }
 
@@ -199,18 +180,11 @@ test.describe.serial("diner user tests", () => {
     await page.goto("/");
     await signInDiner(page);
     await page.route("**/api/auth", async (route, request) => {
-      if (
-        request.method() === "DELETE" &&
-        request.headers()["authorization"] === "Bearer mocked-jwt-token-diner"
-      ) {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({ message: "Logout successful" }),
-        });
-      } else {
-        await route.continue();
-      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ message: "Logout successful" }),
+      });
     });
     await page.getByRole("link", { name: "Logout" }).click();
     await expect(page.locator("#navbar-dark")).toContainText("Login");
@@ -222,28 +196,21 @@ test.describe.serial("diner user tests", () => {
     await signInDiner(page);
 
     await page.route("**/api/order", async (route, request) => {
-      if (
-        request.method() === "GET" &&
-        request.headers()["authorization"] === "Bearer mocked-jwt-token-diner"
-      ) {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify([
-            {
-              id: 1,
-              items: [
-                { name: "Veggie A", quantity: 1 },
-                { name: "Pepperoni", quantity: 2 },
-              ],
-              total: 3,
-              user: "pizza diner",
-            },
-          ]),
-        });
-      } else {
-        await route.continue();
-      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([
+          {
+            id: 1,
+            items: [
+              { name: "Veggie A", quantity: 1 },
+              { name: "Pepperoni", quantity: 2 },
+            ],
+            total: 3,
+            user: "pizza diner",
+          },
+        ]),
+      });
     });
 
     await page.getByRole("link", { name: "pd" }).click();
@@ -270,68 +237,56 @@ test.describe.serial("diner user tests", () => {
       .click();
 
     await page.route("**/api/user/me", async (route, request) => {
-      if (
-        request.method() === "GET" &&
-        request.headers()["authorization"] === bearerTokenDiner
-      ) {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({
-            id: 2,
-            name: "pizza diner",
-            email: "d@jwt.com",
-            roles: [
-              {
-                role: "diner",
-              },
-            ],
-            iat: 1759895091,
-          }),
-        });
-      } else {
-        await route.continue();
-      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          id: 2,
+          name: "pizza diner",
+          email: "d@jwt.com",
+          roles: [
+            {
+              role: "diner",
+            },
+          ],
+          iat: 1759895091,
+        }),
+      });
     });
 
     await page.route("**/api/order", async (route, request) => {
-      if (
-        request.method() === "POST" &&
-        request.headers()["authorization"] === bearerTokenDiner
-      ) {
-        await route.fulfill({
-          status: 201,
-          contentType: "application/json",
-          body: JSON.stringify({
-            order: {
-              items: [
-                {
-                  menuId: 1,
-                  description: "Veggie",
-                  price: 0.0038,
-                },
-                {
-                  menuId: 2,
-                  description: "Pepperoni",
-                  price: 0.0042,
-                },
-                {
-                  menuId: 3,
-                  description: "Margarita",
-                  price: 0.0042,
-                },
-              ],
-              storeId: "1",
-              franchiseId: "1",
-              id: 21,
-            },
-            jwt: bearerTokenDiner,
-          }),
-        });
-      } else {
-        await route.continue();
-      }
+      await route.fulfill({
+        status: 201,
+        contentType: "application/json",
+        body: JSON.stringify({
+          order: {
+            items: [
+              {
+                menuId: 1,
+                description: "Veggie",
+                price: 0.0038,
+              },
+              {
+                menuId: 2,
+                description: "Pepperoni",
+                price: 0.0042,
+              },
+              {
+                menuId: 3,
+                description: "Margarita",
+                price: 0.0042,
+              },
+            ],
+            storeId: "1",
+            franchiseId: "1",
+            id: 21,
+          },
+          jwt: bearerTokenDiner,
+        }),
+      });
     });
+
+    await page.waitForTimeout(250);
 
     await page.getByRole("button", { name: "Checkout" }).click();
     await expect(page.getByRole("heading")).toContainText("So worth it");
@@ -381,39 +336,31 @@ test("franchise dashboard shows not logged in", async ({ page }) => {
 
 async function signInFranchisee(page: Page) {
   await page.route("**/api/auth", async (route, request) => {
-    if (
-      request.method() === "PUT" &&
-      (await request.postDataJSON()).email === "f@jwt.com" &&
-      (await request.postDataJSON()).password === "franchisee"
-    ) {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          user: {
-            id: 3,
-            name: "pizza franchisee",
-            email: "f@jwt.com",
-            roles: [
-              {
-                role: "diner",
-              },
-              {
-                objectId: 1,
-                role: "franchisee",
-              },
-              {
-                objectId: 2,
-                role: "franchisee",
-              },
-            ],
-          },
-          token: authTokenFranchisee,
-        }),
-      });
-    } else {
-      await route.continue();
-    }
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        user: {
+          id: 3,
+          name: "pizza franchisee",
+          email: "f@jwt.com",
+          roles: [
+            {
+              role: "diner",
+            },
+            {
+              objectId: 1,
+              role: "franchisee",
+            },
+            {
+              objectId: 2,
+              role: "franchisee",
+            },
+          ],
+        },
+        token: authTokenFranchisee,
+      }),
+    });
   });
   await page.getByRole("link", { name: "Login", exact: true }).click();
   await page.getByRole("textbox", { name: "Email address" }).click();
@@ -436,143 +383,116 @@ test("create and delete store", async ({ page }) => {
 
   let callCount = 0;
   await page.route("**/api/franchise/3", async (route, request) => {
-    if (
-      request.method() === "GET" &&
-      request.headers()["authorization"] === bearerTokenFranchisee
-    ) {
-      callCount++;
-      const responseData =
-        callCount === 1
-          ? [
-              {
-                id: 1,
-                name: "pizzaPocket",
-                admins: [
-                  {
-                    id: 3,
-                    name: "pizza franchisee",
-                    email: "f@jwt.com",
-                  },
-                ],
-                stores: [
-                  {
-                    id: 1,
-                    name: "SLC",
-                    totalRevenue: 0.2684,
-                  },
-                ],
-              },
-              {
-                id: 2,
-                name: "testing",
-                admins: [
-                  {
-                    id: 3,
-                    name: "pizza franchisee",
-                    email: "f@jwt.com",
-                  },
-                ],
-                stores: [],
-              },
-            ]
-          : [
-              {
-                id: 1,
-                name: "pizzaPocket",
-                admins: [
-                  {
-                    id: 3,
-                    name: "pizza franchisee",
-                    email: "f@jwt.com",
-                  },
-                ],
-                stores: [
-                  {
-                    id: 1,
-                    name: "SLC",
-                    totalRevenue: 0.2684,
-                  },
-                  {
-                    id: 17,
-                    name: "testing",
-                    totalRevenue: 0,
-                  },
-                ],
-              },
-              {
-                id: 2,
-                name: "testing",
-                admins: [
-                  {
-                    id: 3,
-                    name: "pizza franchisee",
-                    email: "f@jwt.com",
-                  },
-                ],
-                stores: [],
-              },
-            ];
+    callCount++;
+    const responseData =
+      callCount === 1
+        ? [
+            {
+              id: 1,
+              name: "pizzaPocket",
+              admins: [
+                {
+                  id: 3,
+                  name: "pizza franchisee",
+                  email: "f@jwt.com",
+                },
+              ],
+              stores: [
+                {
+                  id: 1,
+                  name: "SLC",
+                  totalRevenue: 0.2684,
+                },
+              ],
+            },
+            {
+              id: 2,
+              name: "testing",
+              admins: [
+                {
+                  id: 3,
+                  name: "pizza franchisee",
+                  email: "f@jwt.com",
+                },
+              ],
+              stores: [],
+            },
+          ]
+        : [
+            {
+              id: 1,
+              name: "pizzaPocket",
+              admins: [
+                {
+                  id: 3,
+                  name: "pizza franchisee",
+                  email: "f@jwt.com",
+                },
+              ],
+              stores: [
+                {
+                  id: 1,
+                  name: "SLC",
+                  totalRevenue: 0.2684,
+                },
+                {
+                  id: 17,
+                  name: "testing",
+                  totalRevenue: 0,
+                },
+              ],
+            },
+            {
+              id: 2,
+              name: "testing",
+              admins: [
+                {
+                  id: 3,
+                  name: "pizza franchisee",
+                  email: "f@jwt.com",
+                },
+              ],
+              stores: [],
+            },
+          ];
 
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify(responseData),
-      });
-    } else {
-      await route.continue();
-    }
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(responseData),
+    });
   });
 
   await page.route("**/api/franchise/1/store", async (route, request) => {
-    if (
-      request.method() === "POST" &&
-      request.headers()["authorization"] === bearerTokenFranchisee
-    ) {
-      const postData = await request.postDataJSON();
-      if (postData && postData.name === "testing") {
-        await route.fulfill({
-          status: 201,
-          contentType: "application/json",
-          body: JSON.stringify({
-            id: 17,
-            franchiseId: 1,
-            name: "testing",
-          }),
-        });
-        return;
-      }
-    }
-    await route.continue();
-  });
-
-  await page.route("**/api/franchise/1/store/17", async (route, request) => {
-    if (
-      request.method() === "DELETE" &&
-      request.headers()["authorization"] === bearerTokenFranchisee
-    ) {
+    const postData = await request.postDataJSON();
+    if (postData && postData.name === "testing") {
       await route.fulfill({
-        status: 200,
+        status: 201,
         contentType: "application/json",
-        body: "",
+        body: JSON.stringify({
+          id: 17,
+          franchiseId: 1,
+          name: "testing",
+        }),
       });
-    } else {
-      await route.continue();
+      return;
     }
   });
 
   await page.route("**/api/franchise/1/store/17", async (route, request) => {
-    if (
-      request.method() === "DELETE" &&
-      request.headers()["authorization"] === bearerTokenFranchisee
-    ) {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({ message: "Store deleted" }),
-      });
-    } else {
-      await route.continue();
-    }
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: "",
+    });
+  });
+
+  await page.route("**/api/franchise/1/store/17", async (route, request) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ message: "Store deleted" }),
+    });
   });
 
   await page
@@ -597,31 +517,23 @@ test("create and delete store", async ({ page }) => {
 
 async function signInAdmin(page: Page) {
   await page.route("**/api/auth", async (route, request) => {
-    if (
-      request.method() === "PUT" &&
-      (await request.postDataJSON()).email === "a@jwt.com" &&
-      (await request.postDataJSON()).password === "admin"
-    ) {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          user: {
-            id: 1,
-            name: "常用名字",
-            email: "a@jwt.com",
-            roles: [
-              {
-                role: "admin",
-              },
-            ],
-          },
-          token: authTokenAdmin,
-        }),
-      });
-    } else {
-      await route.continue();
-    }
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        user: {
+          id: 1,
+          name: "常用名字",
+          email: "a@jwt.com",
+          roles: [
+            {
+              role: "admin",
+            },
+          ],
+        },
+        token: authTokenAdmin,
+      }),
+    });
   });
   await page.getByRole("link", { name: "Login", exact: true }).click();
   await page.getByRole("textbox", { name: "Email address" }).click();
@@ -640,37 +552,30 @@ test("admin dashboard should show", async ({ page }) => {
   await page.route(
     "**/api/franchise?page=0&limit=3&name=*",
     async (route, request) => {
-      if (
-        request.method() === "GET" &&
-        request.headers()["authorization"] === bearerTokenAdmin
-      ) {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({
-            franchises: [
-              {
-                id: "1",
-                name: "pizzaPocket",
-                stores: [
-                  {
-                    id: "1",
-                    name: "SLC",
-                  },
-                ],
-              },
-              {
-                id: "2",
-                name: "testing",
-                stores: [],
-              },
-            ],
-            more: false,
-          }),
-        });
-      } else {
-        await route.continue();
-      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          franchises: [
+            {
+              id: "1",
+              name: "pizzaPocket",
+              stores: [
+                {
+                  id: "1",
+                  name: "SLC",
+                },
+              ],
+            },
+            {
+              id: "2",
+              name: "testing",
+              stores: [],
+            },
+          ],
+          more: false,
+        }),
+      });
     }
   );
 
@@ -686,87 +591,67 @@ test("admin add and delete franchise", async ({ page }) => {
   await page.route(
     "**/api/franchise?page=0&limit=3&name=*",
     async (route, request) => {
-      if (
-        request.method() === "GET" &&
-        request.headers()["authorization"] === bearerTokenAdmin
-      ) {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({
-            franchises: [
-              {
-                id: "1",
-                name: "pizzaPocket",
-                stores: [
-                  {
-                    id: "1",
-                    name: "SLC",
-                  },
-                ],
-              },
-              {
-                id: "2",
-                name: "testing",
-                stores: [],
-              },
-            ],
-            more: false,
-          }),
-        });
-      } else {
-        await route.continue();
-      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          franchises: [
+            {
+              id: "1",
+              name: "pizzaPocket",
+              stores: [
+                {
+                  id: "1",
+                  name: "SLC",
+                },
+              ],
+            },
+            {
+              id: "2",
+              name: "testing",
+              stores: [],
+            },
+          ],
+          more: false,
+        }),
+      });
     }
   );
 
   await page.route("**/api/franchise", async (route, request) => {
+    const postData = await request.postDataJSON();
     if (
-      request.method() === "POST" &&
-      request.headers()["authorization"] === bearerTokenAdmin
+      postData &&
+      postData.name === "testing" &&
+      postData.admins &&
+      postData.admins[0]?.email === "f@jwt.com"
     ) {
-      const postData = await request.postDataJSON();
-      if (
-        postData &&
-        postData.name === "testing" &&
-        postData.admins &&
-        postData.admins[0]?.email === "f@jwt.com"
-      ) {
-        await route.fulfill({
-          status: 201,
-          contentType: "application/json",
-          body: JSON.stringify({
-            stores: [],
-            id: 18,
-            name: "testing",
-            admins: [
-              {
-                email: "f@jwt.com",
-                id: 3,
-                name: "pizza franchisee",
-              },
-            ],
-          }),
-        });
-        return;
-      }
+      await route.fulfill({
+        status: 201,
+        contentType: "application/json",
+        body: JSON.stringify({
+          stores: [],
+          id: 18,
+          name: "testing",
+          admins: [
+            {
+              email: "f@jwt.com",
+              id: 3,
+              name: "pizza franchisee",
+            },
+          ],
+        }),
+      });
+      return;
     }
-    await route.continue();
   });
 
   await page.route("**/api/franchise/2", async (route, request) => {
-    if (
-      request.method() === "DELETE" &&
-      request.headers()["authorization"] === bearerTokenAdmin
-    ) {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({ message: "Franchise deleted" }),
-      });
-    } else {
-      await route.continue();
-    }
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ message: "Franchise deleted" }),
+    });
   });
 
   await page.getByRole("link", { name: "Admin" }).click();

@@ -594,3 +594,193 @@ test("create and delete store", async ({ page }) => {
     .click();
   await page.getByRole("button", { name: "Close" }).click();
 });
+
+async function signInAdmin(page: Page) {
+  await page.route("**/api/auth", async (route, request) => {
+    if (
+      request.method() === "PUT" &&
+      (await request.postDataJSON()).email === "a@jwt.com" &&
+      (await request.postDataJSON()).password === "admin"
+    ) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          user: {
+            id: 1,
+            name: "常用名字",
+            email: "a@jwt.com",
+            roles: [
+              {
+                role: "admin",
+              },
+            ],
+          },
+          token: authTokenAdmin,
+        }),
+      });
+    } else {
+      await route.continue();
+    }
+  });
+  await page.getByRole("link", { name: "Login", exact: true }).click();
+  await page.getByRole("textbox", { name: "Email address" }).click();
+  await page.getByRole("textbox", { name: "Email address" }).fill("a@jwt.com");
+  await page.getByRole("textbox", { name: "Password" }).click();
+  await page.getByRole("textbox", { name: "Password" }).fill("admin");
+  await page.getByRole("button", { name: "Login" }).click();
+  await expect(page.locator("#navbar-dark")).toContainText("Logout");
+  await expect(page.getByLabel("Global")).toContainText("常");
+}
+
+test("admin dashboard should show", async ({ page }) => {
+  await page.goto("/");
+  await signInAdmin(page);
+
+  await page.route(
+    "**/api/franchise?page=0&limit=3&name=*",
+    async (route, request) => {
+      if (
+        request.method() === "GET" &&
+        request.headers()["authorization"] === bearerTokenAdmin
+      ) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            franchises: [
+              {
+                id: "1",
+                name: "pizzaPocket",
+                stores: [
+                  {
+                    id: "1",
+                    name: "SLC",
+                  },
+                ],
+              },
+              {
+                id: "2",
+                name: "testing",
+                stores: [],
+              },
+            ],
+            more: false,
+          }),
+        });
+      } else {
+        await route.continue();
+      }
+    }
+  );
+
+  await page.getByRole("link", { name: "Admin" }).click();
+  await expect(page.getByRole("list")).toContainText("homeadmin-dashboard");
+  await expect(page.getByRole("main")).toContainText("Add Franchise");
+});
+
+test("admin add and delete franchise", async ({ page }) => {
+  await page.goto("/");
+  await signInAdmin(page);
+
+  await page.route(
+    "**/api/franchise?page=0&limit=3&name=*",
+    async (route, request) => {
+      if (
+        request.method() === "GET" &&
+        request.headers()["authorization"] === bearerTokenAdmin
+      ) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            franchises: [
+              {
+                id: "1",
+                name: "pizzaPocket",
+                stores: [
+                  {
+                    id: "1",
+                    name: "SLC",
+                  },
+                ],
+              },
+              {
+                id: "2",
+                name: "testing",
+                stores: [],
+              },
+            ],
+            more: false,
+          }),
+        });
+      } else {
+        await route.continue();
+      }
+    }
+  );
+
+  await page.route("**/api/franchise", async (route, request) => {
+    if (
+      request.method() === "POST" &&
+      request.headers()["authorization"] === bearerTokenAdmin
+    ) {
+      const postData = await request.postDataJSON();
+      if (
+        postData &&
+        postData.name === "testing" &&
+        postData.admins &&
+        postData.admins[0]?.email === "f@jwt.com"
+      ) {
+        await route.fulfill({
+          status: 201,
+          contentType: "application/json",
+          body: JSON.stringify({
+            stores: [],
+            id: 18,
+            name: "testing",
+            admins: [
+              {
+                email: "f@jwt.com",
+                id: 3,
+                name: "pizza franchisee",
+              },
+            ],
+          }),
+        });
+        return;
+      }
+    }
+    await route.continue();
+  });
+
+  await page.route("**/api/franchise/2", async (route, request) => {
+    if (
+      request.method() === "DELETE" &&
+      request.headers()["authorization"] === bearerTokenAdmin
+    ) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ message: "Franchise deleted" }),
+      });
+    } else {
+      await route.continue();
+    }
+  });
+
+  await page.getByRole("link", { name: "Admin" }).click();
+  await expect(page.getByRole("list")).toContainText("homeadmin-dashboard");
+  await expect(page.getByRole("main")).toContainText("Add Franchise");
+
+  await page.getByRole("button", { name: "Add Franchise" }).click();
+  await page.getByRole("textbox", { name: "franchise name" }).click();
+  await page.getByRole("textbox", { name: "franchise name" }).fill("testing");
+  await page.getByRole("textbox", { name: "franchisee admin email" }).click();
+  await page
+    .getByRole("textbox", { name: "franchisee admin email" })
+    .fill("f@jwt.com");
+  await page.getByRole("button", { name: "Create" }).click();
+  await page.getByRole("link", { name: "admin-dashboard" }).click();
+  await page.getByRole("link", { name: "admin-dashboard" }).click();
+});

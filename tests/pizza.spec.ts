@@ -29,32 +29,26 @@ test("register a user", async ({ page }) => {
   await expect(page.getByLabel("Global")).toContainText("TU");
 });
 
+async function signInDiner(page: Page) {
+  await page.getByRole("link", { name: "Login" }).click();
+  await page.getByRole("textbox", { name: "Email address" }).fill("d@jwt.com");
+  await page.getByRole("textbox", { name: "Password" }).click();
+  await page.getByRole("textbox", { name: "Password" }).fill("diner");
+  await page.getByRole("button", { name: "Login" }).click();
+  await expect(page.locator("#navbar-dark")).toContainText("Logout");
+  await expect(page.getByLabel("Global")).toContainText("pd");
+}
+
 // Tests using the shared d@jwt.com account - run serially to avoid conflicts
 test.describe.serial("diner user tests", () => {
   test("sign in a user", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("link", { name: "Login" }).click();
-    await page
-      .getByRole("textbox", { name: "Email address" })
-      .fill("d@jwt.com");
-    await page.getByRole("textbox", { name: "Password" }).click();
-    await page.getByRole("textbox", { name: "Password" }).fill("diner");
-    await page.getByRole("button", { name: "Login" }).click();
-    await expect(page.locator("#navbar-dark")).toContainText("Logout");
-    await expect(page.getByLabel("Global")).toContainText("pd");
+    signInDiner(page);
   });
 
   test("sign out of a user", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("link", { name: "Login" }).click();
-    await page
-      .getByRole("textbox", { name: "Email address" })
-      .fill("d@jwt.com");
-    await page.getByRole("textbox", { name: "Password" }).click();
-    await page.getByRole("textbox", { name: "Password" }).fill("diner");
-    await page.getByRole("button", { name: "Login" }).click();
-    await expect(page.locator("#navbar-dark")).toContainText("Logout");
-    await expect(page.getByLabel("Global")).toContainText("pd");
+    signInDiner(page);
     await page.getByRole("link", { name: "Logout" }).click();
     await expect(page.locator("#navbar-dark")).toContainText("Login");
     await expect(page.locator("#navbar-dark")).toContainText("Register");
@@ -62,15 +56,7 @@ test.describe.serial("diner user tests", () => {
 
   test("diner dashboard", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("link", { name: "Login" }).click();
-    await page
-      .getByRole("textbox", { name: "Email address" })
-      .fill("d@jwt.com");
-    await page.getByRole("textbox", { name: "Password" }).click();
-    await page.getByRole("textbox", { name: "Password" }).fill("diner");
-    await page.getByRole("button", { name: "Login" }).click();
-    await expect(page.locator("#navbar-dark")).toContainText("Logout");
-    await expect(page.getByLabel("Global")).toContainText("pd");
+    signInDiner(page);
 
     await page.getByRole("link", { name: "pd" }).click();
     await expect(page.getByRole("heading")).toContainText("Your pizza kitchen");
@@ -79,15 +65,8 @@ test.describe.serial("diner user tests", () => {
 
   test("sign in and order", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("link", { name: "Login" }).click();
-    await page
-      .getByRole("textbox", { name: "Email address" })
-      .fill("d@jwt.com");
-    await page.getByRole("textbox", { name: "Password" }).click();
-    await page.getByRole("textbox", { name: "Password" }).fill("diner");
-    await page.getByRole("button", { name: "Login" }).click();
-    await expect(page.locator("#navbar-dark")).toContainText("Logout");
-    await expect(page.getByLabel("Global")).toContainText("pd");
+    signInDiner(page);
+
     await page.getByRole("button", { name: "Order now" }).click();
     await page.getByRole("combobox").selectOption("1");
     await page

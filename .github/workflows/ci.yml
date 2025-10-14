@@ -49,17 +49,17 @@ jobs:
           cd backend
           npm ci
 
-      - name: Generate pizza data
-        run: |
-          cd backend
-          chmod +x generatePizzaData.sh
-          ./generatePizzaData.sh
-
       - name: Start backend service
         run: |
           cd backend/src
           node index.js &
           sleep 10
+
+      - name: Generate pizza data
+        run: |
+          cd backend
+          chmod +x generatePizzaData.sh
+          ./generatePizzaData.sh
 
       - name: Build
         run: |

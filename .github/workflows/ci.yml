@@ -9,11 +9,28 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: pizzapassword
+          MYSQL_DATABASE: pizza
+          MYSQL_USER: pizza_user
+          MYSQL_PASSWORD: pizzapassword
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping -h localhost" --health-interval=10s --health-timeout=5s --health-retries=5
     outputs:
       version: ${{ steps.set_version.outputs.version }}
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+
+      - name: Checkout backend service
+        uses: actions/checkout@v4
+        with:
+          repository: KadenK/jwt-pizza-service
+          path: backend
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -26,6 +43,23 @@ jobs:
           version=$(date +'%Y%m%d.%H%M%S')
           echo "version=$version" >> "$GITHUB_OUTPUT"
           printf '{"version": "%s" }' "$version" > public/version.json
+
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          npm ci
+
+      - name: Generate pizza data
+        run: |
+          cd backend
+          chmod +x generatePizzaData.sh
+          ./generatePizzaData.sh
+
+      - name: Start backend service
+        run: |
+          cd backend/src
+          node index.js &
+          sleep 10
 
       - name: Build
         run: |

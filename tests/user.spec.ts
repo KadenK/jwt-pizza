@@ -32,4 +32,32 @@ test("updateUser", async ({ page }) => {
   await page.getByRole("link", { name: "pd" }).click();
 
   await expect(page.getByRole("main")).toContainText("pizza dinerx");
+
+  // Start password update
+  await page.getByRole("button", { name: "Edit" }).click();
+  await page.locator("#password").click();
+  await page.locator("#password").fill("newdiner");
+  await page.getByRole("button", { name: "Update" }).click();
+  await page.getByRole("link", { name: "Logout" }).click();
+  await page.getByRole("link", { name: "Login" }).click();
+  await page.getByRole("textbox", { name: "Email address" }).fill(email);
+  await page.getByRole("textbox", { name: "Password" }).fill("newdiner");
+  await page.getByRole("button", { name: "Login" }).click();
+  await page.getByRole("link", { name: "pd" }).click();
+
+  // Start email update
+  await page.getByRole("button", { name: "Edit" }).click();
+
+  await page.locator('input[type="email"]').click();
+  await page.locator('input[type="email"]').fill(`x${email}`);
+  await page.getByRole("button", { name: "Update" }).click();
+  await page.getByRole("link", { name: "Logout" }).click();
+  await page.getByRole("link", { name: "Login" }).click();
+  await page.getByRole("textbox", { name: "Email address" }).fill(`x${email}`);
+  await page.getByRole("textbox", { name: "Password" }).fill("newdiner");
+  await page.getByRole("button", { name: "Login" }).click();
+  await page.getByRole("link", { name: "pd" }).click();
+
+  await expect(page.getByRole("main")).toContainText("pizza dinerx");
+  await expect(page.getByRole("main")).toContainText("xuser9941@jwt.com");
 });

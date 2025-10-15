@@ -58,8 +58,8 @@ jobs:
       - name: Generate pizza data
         run: |
           cd backend
-          chmod +x generatePizzaData.sh http://localhost:3000
-          ./generatePizzaData.sh
+          chmod +x generatePizzaData.sh
+          ./generatePizzaData.sh http://localhost:3000
 
       - name: Build
         run: |

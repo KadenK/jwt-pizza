@@ -35,7 +35,7 @@ jobs:
       - name: Create backend config
         run: |
           cd backend
-          cat > config.js << EOF
+          cat > src/config.js << EOF
           module.exports = {
             jwtSecret: "ci-jwt-secret",
             db: {

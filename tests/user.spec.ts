@@ -59,5 +59,5 @@ test("updateUser", async ({ page }) => {
   await page.getByRole("link", { name: "pd" }).click();
 
   await expect(page.getByRole("main")).toContainText("pizza dinerx");
-  await expect(page.getByRole("main")).toContainText("xuser9941@jwt.com");
+  await expect(page.getByRole("main")).toContainText(`x${email}`);
 });

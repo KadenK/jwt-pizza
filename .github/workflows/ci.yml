@@ -32,6 +32,29 @@ jobs:
           repository: KadenK/jwt-pizza-service
           path: backend
 
+      - name: Create backend config
+        run: |
+          cd backend
+          cat > config.js << EOF
+          module.exports = {
+            jwtSecret: "ci-jwt-secret",
+            db: {
+              connection: {
+                host: "localhost",
+                user: "pizza_user",
+                password: "pizzapassword",
+                database: "pizza",
+                connectTimeout: 60000,
+              },
+              listPerPage: 10,
+            },
+            factory: {
+              url: "https://pizza-factory.cs329.click",
+              apiKey: "${{ secrets.FACTORY_API_KEY }}",
+            },
+          };
+          EOF
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
